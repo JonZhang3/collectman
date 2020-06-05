@@ -1,0 +1,17 @@
+job:
+    name: XXX
+    fixedRate: 100000
+    from:
+        url: jdbc:mysql://192.168.40.224:3306/cpajt?useUnicode=true&characterEncoding=UTF-8
+        username: root
+        password: 1qaz@WSX
+        maxActive: 4
+        initialSize: 4
+        sql: SELECT z.zhxx_xm BIP_XM, z.zhxx_sfzh BIP_SFZHM, '' BIP_YJXZQH, z.zhxx_xb BIP_XB, z.zhxx_mz BIP_NATION, z.zhxx_hjdz BIP_RPR_ADDRESS, z.zhxx_sjh BIP_CON_TELEPHONE, '' RDJ_LJYY, f.fwxx_ssfwz FWZJBXXDJB_FWZBH, '' RDJ_SSXQBH, '' RZF_ZSLX, CONCAT( z.zhxx_zzksrq, '000000' ) RZF_LXZDRQ, IF( f.fwxx_fwbzdz IS NULL, f.fwxx_fwxxdz, f.fwxx_fwbzdz ) RZF_XZDXXDZ, z.zhxx_djsj RBL_YWCJSJ, z.zhxx_xgsj RBL_YWGXSJ FROM ajt_zhxx z JOIN ajt_fwxx f ON z.zhxx_fwid = f.fwxx_id WHERE z.zhxx_status = '1' AND z.zhxx_djsj >= '20200511000000'
+    to:
+        bootstrap-servers: 10.100.101.17:9092
+        client-id: 123
+        topic: cp_ydpt_tb_ryxx
+        batch-size: 1MB
+        buffer-memory: 1MB
+        acks: all
