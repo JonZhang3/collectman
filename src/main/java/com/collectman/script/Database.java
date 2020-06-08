@@ -20,6 +20,11 @@ public class Database extends IdScriptableObject {
 
     private AccessorFactory accessorFactory;
 
+    public static void init(Scriptable scope) {
+        Database obj = new Database();
+        obj.exportAsJSClass(MAX_PROTOTYPE_ID, scope, false);
+    }
+
     private Database() {
 
     }
@@ -33,11 +38,6 @@ public class Database extends IdScriptableObject {
         AccessorFactoryBuilder factoryBuilder = new AccessorFactoryBuilder();
         factoryBuilder.addDatabase(databaseConfig);
         this.accessorFactory = factoryBuilder.build(false);
-    }
-
-    public static void init(Scriptable scope) {
-        Database obj = new Database();
-        obj.exportAsJSClass(MAX_PROTOTYPE_ID, scope, false);
     }
 
     private static final int
@@ -170,10 +170,8 @@ public class Database extends IdScriptableObject {
             throw new CollectManException("please config the database");
         }
         Scriptable classPrototype = ScriptableObject.getClassPrototype(scope, DATABASE_TAG);
-        System.out.println(classPrototype);
         Database database = new Database(args[0]);
         database.setPrototype(classPrototype);
-        database.setParentScope(this.getParentScope());
         return database;
     }
 

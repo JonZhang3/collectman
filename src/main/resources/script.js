@@ -1,12 +1,15 @@
-print("1")
-
-// var db = database.connect({
-//     url: 'jdbc:mysql://cdb-7qvl5wks.bj.tencentcdb.com:10035/bombproj?useUnicode=true&characterEncoding=utf8&autoReconnect=true&rewriteBatchedStatements=TRUE',
-//     username: 'root',
-//     password: '1qaz@WSX',
-//     maxActive: 10,
-//     initialSize: 5
-// }, 1);
-//
-// var result = db.query('SELECT * FROM article WHERE id = ?', '155041717048101000025', parseInt(1));
+const db = database.connect({
+    url: 'jdbc:oracle:thin:@130.10.7.211:1521:orcl',
+    username: 'lgszxt',
+    password: 'lgszxt',
+    maxActive: 10,
+    initialSize: 5
+});
+const lasttime = "";
+stask.addTask({
+    fixedRate: 3000
+}, function() {
+    // var dataList = db.query('');
+    print(db.query(`SELECT COUNT(1) FROM qxpt_ryxx`));
+});
 
