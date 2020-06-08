@@ -12,6 +12,7 @@ import java.text.MessageFormat;
 import java.util.Locale;
 import java.util.ResourceBundle;
 
+import com.collectman.script.Database;
 import org.mozilla.javascript.ast.FunctionNode;
 import org.mozilla.javascript.v8dtoa.DoubleConversion;
 import org.mozilla.javascript.v8dtoa.FastDtoa;
@@ -136,7 +137,7 @@ public class ScriptRuntime {
     public static final Class<Scriptable> ScriptableClass =
         Scriptable.class;
 
-    private static final Object LIBRARY_SCOPE_KEY = "LIBRARY_SCOPE";
+    public static final Object LIBRARY_SCOPE_KEY = "LIBRARY_SCOPE";
 
     public static boolean isRhinoRuntimeType(Class<?> cl)
     {
@@ -373,7 +374,7 @@ public class ScriptRuntime {
         if (Double.isNaN(x)) {
             return ScriptRuntime.NaNobj;
         }
-        return new Double(x);
+        return x;
     }
 
     /**
@@ -1102,7 +1103,7 @@ public class ScriptRuntime {
     public static Scriptable toObject(Context cx, Scriptable scope, Object val)
     {
         if (val == null) {
-            throw typeError0("msg.null.to.object");
+            return null;
         }
         if (Undefined.isUndefined(val)) {
             throw typeError0("msg.undef.to.object");
@@ -4576,5 +4577,19 @@ public class ScriptRuntime {
     public static final Object[] emptyArgs = new Object[0];
     public static final String[] emptyStrings = new String[0];
 
+    public static NativeError makeError(String message) {
+        return NativeError.make(message);
+    }
+
+    public static boolean isError(Object... args) {
+        int arglen = args.length;
+        if(arglen >= 1) {
+            if(args[0] == null) {
+                return false;
+            }
+            return args[0].getClass() == NativeError.class;
+        }
+        return false;
+    }
 
 }

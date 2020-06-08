@@ -25,4 +25,29 @@ public final class Utils {
         return result.toString();
     }
 
+    public static boolean isEmpty(String src) {
+        return src == null || src.isEmpty();
+    }
+
+    public static boolean isNotEmpty(String src) {
+        return !isEmpty(src);
+    }
+
+    @SuppressWarnings("checked")
+    public static Object[] toArray(Object value) {
+        if (value == null) {
+            return null;
+        }
+        Object[] values;
+        if (value.getClass().isArray()) {
+            values = (Object[]) value;
+        } else if (value instanceof List) {
+            List<Object> list = (List<Object>) value;
+            values = list.toArray();
+        } else {
+            values = new Object[]{value};
+        }
+        return values;
+    }
+
 }

@@ -55,6 +55,17 @@ final class NativeError extends IdScriptableObject
         NativeCallSite.init(obj, sealed);
     }
 
+    static NativeError make(Object... args) {
+        NativeError obj = new NativeError();
+        int arglen = args.length;
+        if(arglen >= 1) {
+            if(args[0] != Undefined.instance) {
+                ScriptableObject.putProperty(obj, "message", ScriptRuntime.toString(args[0]));
+            }
+        }
+        return obj;
+    }
+
     static NativeError make(Context cx, Scriptable scope,
                             IdFunctionObject ctorObj, Object[] args)
     {

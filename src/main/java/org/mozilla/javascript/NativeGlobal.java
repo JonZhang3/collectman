@@ -255,7 +255,10 @@ public class NativeGlobal implements Serializable, IdFunctionCall
         }
 
         double d = ScriptRuntime.stringPrefixToNumber(s, start, radix);
-        return ScriptRuntime.wrapNumber(negative ? -d : d);
+        if (Double.isNaN(d)) {
+            return ScriptRuntime.NaNobj;
+        }
+        return (int) d;
     }
 
     /**
