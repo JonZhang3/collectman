@@ -29,7 +29,7 @@ import org.mozilla.javascript.regexp.NativeRegExp;
  * @author Norris Boyd
  * @author Ronald Brill
  */
-final class NativeString extends IdScriptableObject
+public final class NativeString extends IdScriptableObject
 {
     private static final long serialVersionUID = 920268368584188687L;
 

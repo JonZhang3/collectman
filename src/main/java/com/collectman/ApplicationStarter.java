@@ -27,7 +27,7 @@ public class ApplicationStarter implements CommandLineRunner {
         Producer.init(scope);
 //        KafkaProducer.init(scope);
         //////////////////////
-        Object result = context.evaluateReader(scope, new FileReader("/Volumes/Transcend/code/my/collectman/src/main/resources/script.js"), "", 1, null);
+        Object result = context.evaluateReader(scope, new FileReader("/Users/jon/Documents/code/collectman/src/main/resources/script.js"), "", 1, null);
         System.out.println(result);
     }
 

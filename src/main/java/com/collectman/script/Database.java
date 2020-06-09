@@ -44,13 +44,14 @@ public class Database extends IdScriptableObject {
         Id_constructor = 1,
         Id_toString = 2,
         Id_query = 3,
-        Id_update = 4,
-        Id_page = 5,
-        Id_openTransaction = 6,
-        Id_commit = 7,
-        Id_rollback = 8,
-        Id_close = 9,
-        MAX_PROTOTYPE_ID = 9;
+        Id_queryEach = 4,
+        Id_update = 5,
+        Id_page = 6,
+        Id_openTransaction = 7,
+        Id_commit = 8,
+        Id_rollback = 9,
+        Id_close = 10,
+        MAX_PROTOTYPE_ID = 10;
 
     private static final int
         ConstructorId_connect = -1;
@@ -77,6 +78,10 @@ public class Database extends IdScriptableObject {
             case Id_query:
                 arity = 2;
                 name = "query";
+                break;
+            case Id_queryEach:
+                arity = 2;
+                name = "queryEach";
                 break;
             case Id_update:
                 arity = 2;
@@ -117,6 +122,8 @@ public class Database extends IdScriptableObject {
                 return Id_toString;
             case "query":
                 return Id_query;
+            case "queryEach":
+                return Id_queryEach;
             case "update":
                 return Id_update;
             case "page":
@@ -145,6 +152,8 @@ public class Database extends IdScriptableObject {
                 return connect(scope, args);
             case Id_query:
                 return js_query(scope, ScriptUtils.asString(args, 0), args);
+            case Id_queryEach:
+                return js_queryEach(cx, scope, thisObj, ScriptUtils.asString(args, 0), ScriptUtils.asBaseFunction(args, 1), args);
             case Id_update:
                 return js_update(ScriptUtils.asString(args, 0), args);
             case Id_page:
@@ -200,8 +209,40 @@ public class Database extends IdScriptableObject {
                 if (result.size() == 1) {
                     return result.get(0);
                 }
-                return ScriptRuntime.toObject(scope, Utils.toArray(result));
+                return new NativeArray(Utils.toArray(result));
             });
+        } catch (Exception e) {
+            return ScriptRuntime.makeError(e.getMessage());
+        }
+    }
+
+    public Object js_queryEach(Context cx, Scriptable scope, Scriptable thisObj, String sql, BaseFunction callback, Object[] args) {
+        if (Utils.isEmpty(sql)) {
+            throw ScriptRuntime.throwError(cx, scope, "the sql is empty");
+        }
+        if (callback == null || Undefined.isUndefined(callback)) {
+            throw ScriptRuntime.throwError(cx, scope, "the callback param is null");
+        }
+        Object[] values = toValues(args, 2);
+        try {
+            AccessorFactory.accessor().query(sql, values).result(rs -> {
+                ResultSetMetaData metaData = rs.getMetaData();
+                int colCount = metaData.getColumnCount();
+                while (rs.next()) {
+                    if (colCount == 1) {
+                        callback.call(cx, scope, thisObj, new Object[]{ScriptRuntime.toObject(scope, rs.getObject(1))});
+                    } else {
+                        NativeObject column = new NativeObject();
+                        for (int i = 1; i <= colCount; i++) {
+                            column.put(metaData.getColumnName(i), column, ScriptRuntime.toObject(scope,
+                                rs.getObject(i)));
+                        }
+                        callback.call(cx, scope, thisObj, new Object[]{column});
+                    }
+                }
+                return null;
+            });
+            return null;
         } catch (Exception e) {
             return ScriptRuntime.makeError(e.getMessage());
         }

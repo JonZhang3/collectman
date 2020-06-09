@@ -2,9 +2,9 @@ package com.collectman.script.kafka;
 
 import com.collectman.common.Utils;
 import com.collectman.script.ScriptUtils;
-import com.fasterxml.jackson.databind.ser.std.StringSerializer;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.serialization.StringSerializer;
 import org.mozilla.javascript.*;
 
 import java.time.Duration;
@@ -31,6 +31,12 @@ public class Producer extends IdScriptableObject {
     // retries
     Producer(NativeObject configs) {
         this.properties = new Properties();
+
+        String clientId = ScriptUtils.getStringFromObject(configs, "clientId");
+        if(Utils.isNotEmpty(clientId)) {
+            this.properties.put("client.id", clientId);
+        }
+
         Object servers = configs.get("brokers", configs);
         if (servers == null || servers == Scriptable.NOT_FOUND) {
             throw ScriptRuntime.notFoundError(configs, "brokers");
@@ -77,7 +83,9 @@ public class Producer extends IdScriptableObject {
         Id_connect = 3,
         Id_send = 4,
         Id_disconnect = 5,
-        MAX_PROTOTYPE_ID = 5;
+        Id_flush = 6,
+        Id_fastSend = 7,
+        MAX_PROTOTYPE_ID = 7;
 
     @Override
     protected void initPrototypeId(int id) {
@@ -104,6 +112,14 @@ public class Producer extends IdScriptableObject {
                 arity = 0;
                 name = "disconnect";
                 break;
+            case Id_flush:
+                arity = 0;
+                name = "flush";
+                break;
+            case Id_fastSend:
+                arity = 0;
+                name = "fastSend";
+                break;
             default:
                 throw new IllegalArgumentException(String.valueOf(id));
         }
@@ -123,6 +139,10 @@ public class Producer extends IdScriptableObject {
                 return Id_send;
             case "disconnect":
                 return Id_disconnect;
+            case "flush":
+                return Id_flush;
+            case "fastSend":
+                return Id_fastSend;
             default:
                 throw new IllegalStateException(name);
         }
@@ -140,23 +160,37 @@ public class Producer extends IdScriptableObject {
             case Id_toString:
                 return "[object Object]";
             case Id_connect:
-                js_connect();
+                js_connect(thisObj);
                 return Undefined.instance;
             case Id_send:
-                return js_send(cx, scope, ScriptUtils.asNativeObject(args, 0));
+                return js_send(cx, scope, thisObj, ScriptUtils.asNativeObject(args, 0));
             case Id_disconnect:
-                js_disconnect(ScriptUtils.asLong(args, 0));
+                js_disconnect(thisObj, ScriptUtils.asLong(args, 0));
+                return Undefined.instance;
+            case Id_flush:
+                js_flush(thisObj);
+                return Undefined.instance;
+            case Id_fastSend:
+                js_fastSend(cx, scope, thisObj, ScriptUtils.asNativeObject(args, 0));
                 return Undefined.instance;
             default:
                 throw new IllegalArgumentException(String.valueOf(id));
         }
     }
 
-    public void js_connect() {
-        producer = new KafkaProducer<>(properties);
+    public void js_connect(Scriptable thisObj) {
+        if(!(thisObj instanceof Producer)) {
+            throw ScriptRuntime.typeError("not a Producer instance");
+        }
+        Producer producer = (Producer) thisObj;
+        producer.producer = new KafkaProducer<>(producer.properties);
     }
 
-    public Object js_send(Context cx, Scriptable scope, NativeObject arg) {
+    public Object js_send(Context cx, Scriptable scope, Scriptable thisObj, NativeObject arg) {
+        if(!(thisObj instanceof Producer)) {
+            throw ScriptRuntime.typeError("not a Producer instance");
+        }
+        final Producer producer = (Producer) thisObj;
         String defaultTopic = ScriptUtils.getStringFromObject(arg, "topic");
         if (Utils.isEmpty(defaultTopic)) {
             throw ScriptRuntime.throwError(cx, scope, "provide the config [topic]");
@@ -183,23 +217,77 @@ public class Producer extends IdScriptableObject {
                 if (valueObj == null || valueObj == Scriptable.NOT_FOUND || Undefined.isUndefined(valueObj)) {
                     break;
                 }
-                String value = Utils.GSON.toJson(valueObj);
+                String value;
+                if(valueObj instanceof NativeString) {
+                    value = valueObj.toString();
+                } else {
+                    value = NativeJSON.stringify(cx, scope, valueObj, null, null).toString();
+                }
+//                String value = Utils.GSON.toJson(valueObj);
                 Long partition = ScriptUtils.getLongFromObject(message, "partition");
                 partition = (partition == null || partition < 0) ? defaultPartition : partition;
                 Integer timeout = ScriptUtils.getIntegerFromObject(message, "timeout");
                 timeout = (timeout == null || timeout < 0) ? defaultTimeout : timeout;
                 size++;
-                producer.send(new ProducerRecord<String, String>(defaultTopic, timeout, partition, key, value));
+                producer.producer.send(new ProducerRecord<>(defaultTopic, timeout, partition, key, value));
             }
         }
         return size;
     }
 
-    public void js_disconnect(Long ms) {
-        if (ms == null || ms <= 0) {
-            producer.close();
+    /**
+     * {
+     *     topic: '',
+     *     key: '',
+     *     value: '',
+     *     partition: ,
+     *     timeout:
+     * }
+     */
+    public void js_fastSend(Context cx, Scriptable scope, Scriptable thisObj, NativeObject message) {
+        if(!(thisObj instanceof Producer)) {
+            throw ScriptRuntime.typeError("not a Producer instance");
+        }
+        final Producer producer = (Producer) thisObj;
+        String topic = ScriptUtils.getStringFromObject(message, "topic");
+        if (Utils.isEmpty(topic)) {
+            throw ScriptRuntime.throwError(cx, scope, "provide the config [topic]");
+        }
+        String key = ScriptUtils.getStringFromObject(message, "key");
+        Object valueObj = message.get("value", message);
+        if (valueObj == null || valueObj == Scriptable.NOT_FOUND || Undefined.isUndefined(valueObj)) {
+            return;
+        }
+        String value;
+        if(valueObj instanceof NativeString) {
+            value = valueObj.toString();
         } else {
-            producer.close(Duration.ofMillis(ms));
+            value = NativeJSON.stringify(cx, scope, valueObj, null, null).toString();
+        }
+        Long partition = ScriptUtils.getLongFromObject(message, "partition");
+        partition = (partition != null && partition < 0) ? null : partition;
+        Integer timeout = ScriptUtils.getIntegerFromObject(message, "timeout");
+        timeout = (timeout != null && timeout < 0) ? null : timeout;
+        producer.producer.send(new ProducerRecord<>(topic, timeout, partition, key, value));
+    }
+
+    public void js_flush(Scriptable thisObj) {
+        if(!(thisObj instanceof Producer)) {
+            throw ScriptRuntime.typeError("not a Producer instance");
+        }
+        final Producer producer = (Producer) thisObj;
+        producer.producer.flush();
+    }
+
+    public void js_disconnect(Scriptable thisObj, Long ms) {
+        if(!(thisObj instanceof Producer)) {
+            throw ScriptRuntime.typeError("not a Producer instance");
+        }
+        final Producer producer = (Producer) thisObj;
+        if (ms == null || ms <= 0) {
+            producer.producer.close();
+        } else {
+            producer.producer.close(Duration.ofMillis(ms));
         }
     }
 
