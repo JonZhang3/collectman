@@ -109,7 +109,7 @@ public class Kafka extends IdScriptableObject {
         return Undefined.instance;
     }
 
-    public static KafkaProducer producer(Scriptable scope, Object[] args) {
+    public static Producer producer(Scriptable scope, Object[] args) {
         if (args == null || args.length == 0 || args[0] == null) {
             throw new CollectManException("please config the database");
         }
@@ -118,8 +118,8 @@ public class Kafka extends IdScriptableObject {
         }
         NativeObject configs = (NativeObject) args[0];
         ScriptUtils.assign(configs, Kafka.commonConfig);
-        Scriptable classPrototype = ScriptableObject.getClassPrototype(scope, KafkaProducer.KAFKA_PRODUCER_TAG);
-        KafkaProducer producer = new KafkaProducer(configs);
+        Scriptable classPrototype = ScriptableObject.getClassPrototype(scope, Producer.KAFKA_PRODUCER_TAG);
+        Producer producer = new Producer(configs);
         producer.setPrototype(classPrototype);
         return producer;
     }

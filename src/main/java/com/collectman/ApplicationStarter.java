@@ -4,7 +4,7 @@ import com.collectman.script.Database;
 import com.collectman.script.Global;
 import com.collectman.script.SchedulingTask;
 import com.collectman.script.kafka.Kafka;
-import com.collectman.script.kafka.KafkaProducer;
+import com.collectman.script.kafka.Producer;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ScriptableObject;
 import org.springframework.boot.CommandLineRunner;
@@ -24,9 +24,10 @@ public class ApplicationStarter implements CommandLineRunner {
         Database.init(scope);
         SchedulingTask.init(scope);
         Kafka.init(scope);
+        Producer.init(scope);
 //        KafkaProducer.init(scope);
         //////////////////////
-        Object result = context.evaluateReader(scope, new FileReader("/Users/jon/Documents/code/collectman/src/main/resources/script.js"), "", 1, null);
+        Object result = context.evaluateReader(scope, new FileReader("/Volumes/Transcend/code/my/collectman/src/main/resources/script.js"), "", 1, null);
         System.out.println(result);
     }
 

@@ -1,6 +1,5 @@
 package com.collectman.script;
 
-import com.collectman.common.Utils;
 import org.mozilla.javascript.*;
 
 import java.util.Properties;
@@ -16,8 +15,7 @@ public final class ScriptUtils {
     }
 
     public static String asString(Object obj) {
-        if (obj == null || obj == Undefined.instance
-            || obj == Undefined.SCRIPTABLE_UNDEFINED || obj == UniqueTag.NOT_FOUND) {
+        if (obj == null || Undefined.isUndefined(obj) || obj == UniqueTag.NOT_FOUND) {
             return null;
         }
         return ScriptRuntime.toString(obj);
@@ -33,6 +31,26 @@ public final class ScriptUtils {
             return null;
         }
         return (int) number;
+    }
+
+    public static Integer asInteger(Object obj) {
+        double val = ScriptRuntime.toNumber(obj);
+        if(Double.isNaN(val)){
+            return 0;
+        }
+        return (int) val;
+    }
+
+    public static Long asLong(Object[] args, int index) {
+        Object val = checkArgs(args, index);
+        if (val == null) {
+            return null;
+        }
+        double number = ScriptRuntime.toNumber(val);
+        if (Double.isNaN(number)) {
+            return null;
+        }
+        return (long) number;
     }
 
     public static Long asLong(Object obj) {
@@ -104,8 +122,45 @@ public final class ScriptUtils {
         return result.toString();
     }
 
-    public static void putPropertiesIfNull(Properties properties, Object value) {
+    public static Double getDoubleFromObject(NativeObject config, String propertyName) {
+        Object val = config.get(propertyName, config);
+        if(val == null || val == Scriptable.NOT_FOUND) {
+            return null;
+        }
+        double result = ScriptRuntime.toNumber(val);
+        if(Double.isNaN(result)) {
+            throw ScriptRuntime.typeError("the config [" + propertyName + "] must a number");
+        }
+        return result;
+    }
 
+    public static Integer getIntegerFromObject(NativeObject config, String propertyName) {
+        Double result = getDoubleFromObject(config, propertyName);
+        return result == null ? null : result.intValue();
+    }
+
+    public static Long getLongFromObject(NativeObject config, String propertyName) {
+        Double result = getDoubleFromObject(config, propertyName);
+        return result == null ? null : result.longValue();
+    }
+
+    public static String getStringFromObject(NativeObject config, String propertyName) {
+        Object val = config.get(propertyName, config);
+        if(val == null || val == Scriptable.NOT_FOUND || Undefined.isUndefined(val)) {
+            return null;
+        }
+        return ScriptRuntime.toString(val);
+    }
+
+    public static NativeArray getArrayFromObject(NativeObject obj, String propertyName) {
+        Object val = obj.get(propertyName, obj);
+        if(val == null || val == Scriptable.NOT_FOUND || Undefined.isUndefined(val)) {
+            return null;
+        }
+        if(val instanceof NativeArray) {
+            return (NativeArray) val;
+        }
+        return null;
     }
 
     private static Object checkArgs(Object[] args, int index) {
